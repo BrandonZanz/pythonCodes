@@ -1,0 +1,42 @@
+from pyModbusTCP.client import ModbusClient
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+import time
+
+
+def read_socket(start_register, num_register):
+    # TCP socket: Can auto connect on Modbus request, close after it
+    sock = ModbusClient(host="192.168.2.166", port=502, auto_open=True, auto_close=True)
+
+    # Read 2 x 16 bits registers at modbus address 0:
+    regs = sock.read_holding_registers(start_register, num_register)
+    data = []
+    if regs:
+        for i in range(len(regs)):
+        #    print("Register #%i : %s" % (i + start_register, regs[i])
+            data.append(regs[i])
+        return data
+    else:
+        print("Read error")
+
+
+if __name__ == '__main__':
+    # Retrieving credentials to access Firebase. See Appendix B for the complete credential.
+    cred = credentials.Certificate('/Users/bzeld/Downloads/bzanz.json')
+    firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    TCP_IP = '192.168.2.166'
+    # Selecting collection inside DB Dictionary
+    doc_ref = db.collection(TCP_IP).document(time.strftime("%y%m%d"))
+    hour = time.strftime("%H:%M")
+    # Setting a new and empty field
+    #doc_ref.set({
+    #    hour: u'null',
+    #})
+    while 1:
+        hour = time.strftime("%H:%M")
+        a = read_socket(50528, 2)
+        doc_ref.update({
+            hour: u''+str(a[1])
+            })
